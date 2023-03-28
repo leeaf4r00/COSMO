@@ -8,31 +8,29 @@ layout = [
     [sg.Text("Escolha o tipo de pesquisa:"), sg.Radio('Código de barras', 'RADIO1',
                                                       default=True, key="-EAN-"), sg.Radio('Descrição', 'RADIO1', key="-DESC-")],
     [sg.Text("Insira o código EAN ou descrição do produto:"),
-     sg.Input(key="-SEARCH-", enable_events=True)],
-    [sg.Button("Buscar"), sg.Button("Sair")],
+     sg.Input(key="-SEARCH-"), sg.Button("Buscar", bind_return_key=True)],
     [sg.Text(size=(50, 3), key="-OUTPUT-")],
     [sg.Text("Desenvolvido por Rafael Fernandes, Rurópolis-Pará"), sg.Text("  "),
      sg.Button('Instagram', font=('Helvetica', 10, 'underline'), button_color=('white', 'purple'), key='-INSTAGRAM-')],
-    [sg.Listbox([], size=(50, 6), key="-HISTORY-")],
+    [sg.Text("Histórico de pesquisas", font=('Helvetica', 12, 'bold'),
+             justification='center', size=(50, 1))],
+    [sg.Multiline(key='-HISTORY-', size=(50, 6))],
+    [sg.Button("Listar Produtos Pesquisados", key="-LIST-")]
 ]
 
-window = sg.Window("Consulta de Produto", layout, size=(600, 400))
+window = sg.Window("Consulta de Produto", layout, size=(600, 500))
 
-# Lista para armazenar histórico de pesquisas
-search_history = []
+# Variáveis para armazenar o histórico e a lista de produtos pesquisados
+history = []
+products_list = []
 
 # Loop para ler os eventos da janela
 while True:
     event, values = window.read()
-    if event == sg.WIN_CLOSED or event == "Sair":
+    if event == sg.WIN_CLOSED:
         break
 
-    if event == "-SEARCH-":
-        # Se o usuário pressionar Enter, inicia a busca automaticamente
-        if len(values["-SEARCH-"]) == 13:  # EAN tem 13 dígitos
-            window["Buscar"].click()
-
-    if event == "Buscar":
+    if event == "Buscar" or event == "-SEARCH-" and values["-SEARCH-"]:
         if values["-EAN-"]:
             search_type = "gtins"
         else:
@@ -44,7 +42,10 @@ while True:
 
         response = requests.get(url, headers=headers)
 
-        if response.status_code == 404:
+        if response.status_code == 429:
+            window["-OUTPUT-"].update(
+                "Número de requisições excedido. Tente novamente mais tarde.")
+        elif response.status_code == 404:
             window["-OUTPUT-"].update("Produto não encontrado.")
         elif response.status_code == 200:
             data = response.json()
@@ -61,10 +62,14 @@ while True:
                 window["-OUTPUT-"].update(
                     "Informações do produto não disponíveis.")
             else:
-                output_text = f"Código EAN: {codigo}\nDescrição: {descricao}\nNCM: {ncm}"
-                window["-OUTPUT-"].update(output_text)
-                search_history.append(output_text)
-                window["-HISTORY-"].update(search_history)
+                window["-OUTPUT-"].update(
+                    f"Código EAN: {codigo}\nDescrição: {descricao}\nNCM: {ncm}")
+
+                # Adiciona a pesquisa ao histórico e à lista de produtos pesquisados
+                search_result = f"Código EAN: {codigo}\nDescrição: {descricao}\nNCM: {ncm}"
+                history.append(search_result)
+                products_list.append(search_result)
+
         else:
             window["-OUTPUT-"].update(
                 f"Erro na consulta: {response.status_code}")
