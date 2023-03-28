@@ -30,7 +30,7 @@ while True:
 
     search_term = values["-SEARCH-"]
     url = f"https://api.cosmos.bluesoft.com.br/{search_type}/{search_term}"
-    headers = {"X-Cosmos-Token": "k9wmJau-n3jaYFYriECRwA"}
+    headers = {"X-Cosmos-Token": "BZz71irbViqU3OrTeSHFHg"}
 
     response = requests.get(url, headers=headers)
 
