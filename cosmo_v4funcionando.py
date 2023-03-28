@@ -25,12 +25,13 @@ while True:
 
     if values["-EAN-"]:
         search_type = "gtins"
+        search_term = values["-SEARCH-"]
     else:
         search_type = "products"
+        search_term = f"?query={values['-SEARCH-']}"
 
-    search_term = values["-SEARCH-"]
-    url = f"https://api.cosmos.bluesoft.com.br/{search_type}?query={search_term}"
-    headers = {"X-Cosmos-Token": "l5XSvKMx3dKizYndt_WBLg"}
+    url = f"https://api.cosmos.bluesoft.com.br/{search_type}/{search_term}.json"
+    headers = {"X-Cosmos-Token": "k9wmJau-n3jaYFYriECRwA"}
 
     response = requests.get(url, headers=headers)
 
@@ -43,10 +44,9 @@ while True:
             ncm = data.get("ncm")
             codigo = data.get("gtin")
         else:
-            produto = data[0]
-            descricao = produto.get("description")
-            ncm = produto.get("ncm")
-            codigo = produto.get("gtin")
+            descricao = data[0].get("description")
+            ncm = data[0].get("ncm")
+            codigo = data[0].get("gtin")
         if not descricao or not ncm:
             window["-OUTPUT-"].update("Informações do produto não disponíveis.")
         else:
