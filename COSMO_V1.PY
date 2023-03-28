@@ -1,0 +1,73 @@
+import requests
+import PySimpleGUI as sg
+import webbrowser
+
+# Define a janela da GUI
+sg.theme('Reddit')
+layout = [
+    [sg.Text("Escolha o tipo de pesquisa:"), sg.Radio('Código de barras', 'RADIO1',
+                                                      default=True, key="-EAN-"), sg.Radio('Descrição', 'RADIO1', key="-DESC-")],
+    [sg.Text("Insira o código EAN do produto:"), sg.Input(key="-SEARCH-")],
+    [sg.Button("Buscar"), sg.Button("Sair")],
+    [sg.Text(size=(50, 3), key="-OUTPUT-")],
+    [sg.Image(key='-IMAGE-', size=(250, 250))],
+    [sg.Text("Desenvolvido por Rafael Fernandes, Rurópolis-Pará"), sg.Text("  "),
+     sg.Button('Instagram', font=('Helvetica', 10, 'underline'), key='-INSTAGRAM-')]
+]
+
+window = sg.Window("Consulta de Produto", layout, size=(600, 500))
+
+# Loop para ler os eventos da janela
+while True:
+    event, values = window.read()
+    if event == sg.WIN_CLOSED or event == "Sair":
+        break
+
+    if values["-EAN-"]:
+        search_type = "gtins"
+    else:
+        search_type = "products"
+
+    search_term = values["-SEARCH-"]
+    url = f"https://api.cosmos.bluesoft.com.br/{search_type}/{search_term}.json"
+    headers = {"X-Cosmos-Token": "l5XSvKMx3dKizYndt_WBLg"}
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 404:
+        window["-OUTPUT-"].update("Produto não encontrado.")
+    elif response.status_code == 200:
+        data = response.json()
+        if search_type == "gtins":
+            descricao = data.get("description")
+            ncm = data.get("ncm")
+            codigo = data.get("gtin")
+        else:
+            descricao = data[0].get("description")
+            ncm = data[0].get("ncm")
+            codigo = data[0].get("gtin")
+        if not descricao or not ncm:
+            window["-OUTPUT-"].update("Informações do produto não disponíveis.")
+        else:
+            preco_medio = data[0].get("average_price")
+            imagem_url = data[0].get("thumbnail")
+            if imagem_url:
+                response_img = requests.get(imagem_url)
+                with open('produto.jpg', 'wb') as f:
+                    f.write(response_img.content)
+                window['-IMAGE-'].update(filename='produto.jpg')
+            else:
+                window['-IMAGE-'].update(filename='')
+            if not preco_medio:
+                window["-OUTPUT-"].update(
+                    f"Código EAN: {codigo}\nDescrição: {descricao}\nNCM: {ncm}\nPreço médio: Não disponível")
+            else:
+                window["-OUTPUT-"].update(
+                    f"Código EAN: {codigo}\nDescrição: {descricao}\nNCM: {ncm}\nPreço médio: R${preco_medio:.2f}")
+    else:
+        window["-OUTPUT-"].update(f"Erro na consulta: {response.status_code}")
+
+    if event == '-INSTAGRAM-':
+        webbrowser.open('https://www.instagram.com/')
+
+window.close()
